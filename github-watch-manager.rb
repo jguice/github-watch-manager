@@ -6,7 +6,7 @@ require 'highline/import'
 require 'octokit'
 
 TOKEN_FILENAME = '.token'
-TOKEN_NAME = 'github-unwatcher'
+TOKEN_NAME = 'github-watch-manager'
 
 SCOPES = ['user','repo']
 
