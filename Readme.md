@@ -4,6 +4,8 @@ github-watch-manager
 ======
 Ruby commandline tool to mass watch/unwatch repositories.  For example a team could create a text file list of important repos that should be watched within a larger github org.  This tool could then be used to "apply" that list (unwatching repos that weren't in the list automatically).
 
+This tool works for both private and public repositories and essentially provides a commandline ability to manage https://github.com/watching.
+
 
 ## Usage
 ```
