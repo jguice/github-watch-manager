@@ -24,7 +24,7 @@ class GithubWatchManager
 
     # try loading the github access token file
     begin
-      token = File.open(token_file, "r").read
+      token = File.open(token_file, 'r').read
     rescue Errno::ENOENT
       @log.warn("couldn't load #{token_file}")
     end
