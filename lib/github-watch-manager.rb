@@ -6,22 +6,20 @@ require 'logger'
 require 'highline/import'
 require 'octokit'
 
-
+# Main class / object
 class GithubWatchManager
-
   TOKEN_FILENAME = '.token'
   TOKEN_NAME = 'github-watch-manager'
 
-  SCOPES = ['user','repo']
+  SCOPES = %w(user repo)
 
   def initialize
     @log = Logger.new(STDOUT)
 
-    #log.level = Logger::DEBUG
+    # log.level = Logger::DEBUG
   end
 
-
-  def get_token(token_file=TOKEN_FILENAME)
+  def get_token(token_file = TOKEN_FILENAME)
     @log.debug("reading #{token_file} token file")
 
     # try loading the github access token file
@@ -33,10 +31,7 @@ class GithubWatchManager
 
     token
   end
-
 end
-
-
 
 # def main
 #   app_token = fetch_or_create_token
