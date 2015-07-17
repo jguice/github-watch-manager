@@ -1,29 +1,21 @@
-require 'github-watch-manager'
+require 'github_watch_manager'
 
 RSpec.describe GithubWatchManager do
-
   before(:each) do
-    @manager = GithubWatchManager.new()
+    let(:manager) { described_class.new }
   end
 
   describe '.get_token' do
-
     context 'when token is missing' do
-      it { expect(@manager.get_token).to be(nil) }
+      it { expect(manager.get_token).to be(nil) }
     end
 
     context 'when the token file is present' do
-      it { expect(@manager.get_token("#{fixtures}/good.token")).to eq('6ceeaaf2f4c03097ea0be1264565ed2493d4b25c') }
-      it { expect(@manager.get_token("#{fixtures}/bad.token")).not_to eq('6ceeaaf2f4c03097ea0be1264565ed2493d4b25c')}
+      it { expect(manager.get_token("#{fixtures}/good.token")).to eq('6ceeaaf2f4c03097ea0be1264565ed2493d4b25c') }
+      it { expect(manager.get_token("#{fixtures}/bad.token")).not_to eq('6ceeaaf2f4c03097ea0be1264565ed2493d4b25c') }
     end
-
   end
-
 end
-
-
-
-
 
 # describe SimpleController do
 
