@@ -4,6 +4,10 @@ require 'logger'
 require 'highline/import'
 require 'octokit'
 
+require_relative 'util'
+
+include Util
+
 # Main class / object
 class GithubWatchManager
   TOKEN_FILENAME = '.token'
@@ -28,6 +32,26 @@ class GithubWatchManager
     end
 
     token
+  end
+
+  def show_intro
+    puts <<-EOM
+
+Hi, this little tool will mass-watch/unwatch a list of github repos (one per line) in an input file (see help for
+options).  The repo name format is org/repo (just like they appear on https://github.com/jguice/github-watch-manager).
+
+Before you can run the tool we'll need to create a Personal Access Token.  To create the token, we'll ask for your
+github username, password, and possibly a two-factor auth token.
+
+This will only happen the first time you run this script or if the token disappears.  The Personal Access Token will be
+dropped into a file called #{TOKEN_FILENAME} in this directory should you need it.
+
+The script will only be given the #{listify(SCOPES)} roles which will allow it to see and manage which repos you're
+subscribed to.
+
+Ready?  Here we go. :)
+
+EOM
   end
 end
 

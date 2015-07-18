@@ -1,17 +1,21 @@
 require 'github_watch_manager'
 
 RSpec.describe GithubWatchManager do
-  let(:manager) { described_class.new }
+  let(:gwm) { described_class.new }
 
   describe '.get_token' do
     context 'when token is missing' do
-      it { expect(manager.get_token).to be(nil) }
+      it { expect(gwm.get_token).to be(nil) }
     end
 
     context 'when the token file is present' do
-      it { expect(manager.get_token("#{fixtures}/good.token")).to eq('6ceeaaf2f4c03097ea0be1264565ed2493d4b25c') }
-      it { expect(manager.get_token("#{fixtures}/bad.token")).not_to eq('6ceeaaf2f4c03097ea0be1264565ed2493d4b25c') }
+      it { expect(gwm.get_token("#{fixtures}/good.token")).to eq('6ceeaaf2f4c03097ea0be1264565ed2493d4b25c') }
+      it { expect(gwm.get_token("#{fixtures}/bad.token")).not_to eq('6ceeaaf2f4c03097ea0be1264565ed2493d4b25c') }
     end
+  end
+
+  describe '.show_intro' do
+    it { expect{ gwm.show_intro }.to output(/github/).to_stdout }
   end
 end
 
