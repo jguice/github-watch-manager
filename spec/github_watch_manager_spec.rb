@@ -1,9 +1,7 @@
 require 'github_watch_manager'
 
 RSpec.describe GithubWatchManager do
-  before(:each) do
-    let(:manager) { described_class.new }
-  end
+  let(:manager) { described_class.new }
 
   describe '.get_token' do
     context 'when token is missing' do
