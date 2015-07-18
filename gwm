@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+
+require_relative 'lib/github_watch_manager'
+
+gwm = GithubWatchManager.new
+
+token = gwm.get_token
+
+if token.nil?
+  gwm.show_intro
+end
