@@ -20,3 +20,4 @@ To "reset" the app token you must remove it from github and delete the .token fi
 
 ## TODO
 - show what changes will be made and ask for confirmation
+- turn this into a gem
