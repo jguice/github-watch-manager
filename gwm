@@ -1,11 +1,214 @@
 #!/usr/bin/env ruby
 
+# TODO write failures to a file for easy retrying
+# TODO have a way to unwatch all repos not in given orgs
+# TODO change unwatch to ignore globally (including options)
+
 require_relative 'lib/github_watch_manager'
 
 gwm = GithubWatchManager.new
+
+opts = parse_options
+
+gwm.log.level = GithubWatchManager::DEBUG if opts[:verbose]
+
+gwm.log.debug(opts)
 
 token = gwm.get_token
 
 if token.nil?
   gwm.show_intro
+
+  username, password = gwm.prompt_for_credentials
+
+  auth_client = gwm.create_github_client(username, password)
+
+  token = gwm.create_and_save_app_token(auth_client)
 end
+
+github = Octokit::Client.new(access_token: token)
+
+github.auto_paginate = true # ensure we get all subscriptions in one call (up to a point)
+
+if opts[:list]
+  puts 'fetching subscriptions...'
+
+  subscriptions = github.subscriptions.collect { |s| s[:full_name] }
+
+  subscriptions.sort.each do |s|
+    if opts[:org]
+      gwm.log.debug("limiting results to #{opts[:org]} org")
+      next unless s.start_with?("#{opts[:org]}/")
+    end
+
+    puts s
+  end
+
+  exit(0)
+end
+
+puts 'Enter repos (1 per line, ctrl-d on empty line to end)' if ARGF.filename == '-'
+
+given_repos = Array.new
+
+ARGF.readlines.each do |repo|
+  repo.chomp!
+
+  given_repos << repo
+
+  gwm.log.debug("processing repo #{repo}")
+
+  if opts[:unwatch]
+    print "Unwatching #{repo}..."
+    result = github.update_subscription(repo, ignored: true) # TODO move this functionality and handling to GWM
+
+    if result[:ignored] && !result[:subscribed]
+      puts 'done'
+    else
+      puts 'failed'
+    end
+
+  elsif opts[:watch]
+    print "Watching #{repo}..."
+    result = github.update_subscription(repo, subscribed: true)
+
+    if !result[:ignored] && result[:subscribed]
+      puts 'done'
+    else
+      puts 'failed'
+    end
+  end
+end
+
+if opts[:only_watch]
+  subscriptions = github.subscriptions.collect { |s| s[:full_name] }
+
+  subscriptions.sort.each do |repo|
+    if !given_repos.include?(repo)
+      next if opts[:org] && get_org(repo) != opts[:org] # skip repos not matching org if given
+
+      print "Unwatching #{repo}..."
+      result = github.update_subscription(repo, ignored: true) # TODO move this functionality and handling to GWM
+
+      if result[:ignored] && !result[:subscribed]
+        puts 'done'
+      else
+        puts 'failed'
+      end
+    end
+  end
+end
+
+# watch a repository
+#result = github.update_subscription('racker/cliff-tablib', subscribed: true)
+#pp result
+
+# unwatch a repository
+#result = github.update_subscription('racker/cliff-tablib', ignored: true)
+#pp result
+
+# EXAMPLE update_subscription result
+#
+# {:subscribed=>false,
+#  :ignored=>true,
+#  :reason=>nil,
+#  :created_at=>2015-03-31 01:15:14 UTC,
+#  :url=>"https://api.github.com/repos/racker/perigee/subscription",
+#  :repository_url=>"https://api.github.com/repos/racker/perigee"}
+
+# EXAMPLE repo object JSON
+#
+# {:id=>10227815,
+#  :name=>"sage",
+#  :full_name=>"racker/sage",
+#  :owner=>
+#   {:login=>"racker",
+#    :id=>556922,
+#    :avatar_url=>"https://avatars.githubusercontent.com/u/556922?v=3",
+#    :gravatar_id=>"",
+#    :url=>"https://api.github.com/users/racker",
+#    :html_url=>"https://github.com/racker",
+#    :followers_url=>"https://api.github.com/users/racker/followers",
+#    :following_url=>
+#     "https://api.github.com/users/racker/following{/other_user}",
+#    :gists_url=>"https://api.github.com/users/racker/gists{/gist_id}",
+#    :starred_url=>"https://api.github.com/users/racker/starred{/owner}{/repo}",
+#    :subscriptions_url=>"https://api.github.com/users/racker/subscriptions",
+#    :organizations_url=>"https://api.github.com/users/racker/orgs",
+#    :repos_url=>"https://api.github.com/users/racker/repos",
+#    :events_url=>"https://api.github.com/users/racker/events{/privacy}",
+#    :received_events_url=>"https://api.github.com/users/racker/received_events",
+#    :type=>"Organization",
+#    :site_admin=>false},
+#  :private=>true,
+#  :html_url=>"https://github.com/racker/sage",
+#  :description=>"Cloud Intelligence Dashboard",
+#  :fork=>false,
+#  :url=>"https://api.github.com/repos/racker/sage",
+#  :forks_url=>"https://api.github.com/repos/racker/sage/forks",
+#  :keys_url=>"https://api.github.com/repos/racker/sage/keys{/key_id}",
+#  :collaborators_url=>
+#   "https://api.github.com/repos/racker/sage/collaborators{/collaborator}",
+#  :teams_url=>"https://api.github.com/repos/racker/sage/teams",
+#  :hooks_url=>"https://api.github.com/repos/racker/sage/hooks",
+#  :issue_events_url=>
+#   "https://api.github.com/repos/racker/sage/issues/events{/number}",
+#  :events_url=>"https://api.github.com/repos/racker/sage/events",
+#  :assignees_url=>"https://api.github.com/repos/racker/sage/assignees{/user}",
+#  :branches_url=>"https://api.github.com/repos/racker/sage/branches{/branch}",
+#  :tags_url=>"https://api.github.com/repos/racker/sage/tags",
+#  :blobs_url=>"https://api.github.com/repos/racker/sage/git/blobs{/sha}",
+#  :git_tags_url=>"https://api.github.com/repos/racker/sage/git/tags{/sha}",
+#  :git_refs_url=>"https://api.github.com/repos/racker/sage/git/refs{/sha}",
+#  :trees_url=>"https://api.github.com/repos/racker/sage/git/trees{/sha}",
+#  :statuses_url=>"https://api.github.com/repos/racker/sage/statuses/{sha}",
+#  :languages_url=>"https://api.github.com/repos/racker/sage/languages",
+#  :stargazers_url=>"https://api.github.com/repos/racker/sage/stargazers",
+#  :contributors_url=>"https://api.github.com/repos/racker/sage/contributors",
+#  :subscribers_url=>"https://api.github.com/repos/racker/sage/subscribers",
+#  :subscription_url=>"https://api.github.com/repos/racker/sage/subscription",
+#  :commits_url=>"https://api.github.com/repos/racker/sage/commits{/sha}",
+#  :git_commits_url=>
+#   "https://api.github.com/repos/racker/sage/git/commits{/sha}",
+#  :comments_url=>"https://api.github.com/repos/racker/sage/comments{/number}",
+#  :issue_comment_url=>
+#   "https://api.github.com/repos/racker/sage/issues/comments{/number}",
+#  :contents_url=>"https://api.github.com/repos/racker/sage/contents/{+path}",
+#  :compare_url=>
+#   "https://api.github.com/repos/racker/sage/compare/{base}...{head}",
+#  :merges_url=>"https://api.github.com/repos/racker/sage/merges",
+#  :archive_url=>
+#   "https://api.github.com/repos/racker/sage/{archive_format}{/ref}",
+#  :downloads_url=>"https://api.github.com/repos/racker/sage/downloads",
+#  :issues_url=>"https://api.github.com/repos/racker/sage/issues{/number}",
+#  :pulls_url=>"https://api.github.com/repos/racker/sage/pulls{/number}",
+#  :milestones_url=>
+#   "https://api.github.com/repos/racker/sage/milestones{/number}",
+#  :notifications_url=>
+#   "https://api.github.com/repos/racker/sage/notifications{?since,all,participating}",
+#  :labels_url=>"https://api.github.com/repos/racker/sage/labels{/name}",
+#  :releases_url=>"https://api.github.com/repos/racker/sage/releases{/id}",
+#  :created_at=>2013-05-22 19:20:21 UTC,
+#  :updated_at=>2015-05-22 18:16:29 UTC,
+#  :pushed_at=>2015-07-17 23:24:55 UTC,
+#  :git_url=>"git://github.com/racker/sage.git",
+#  :ssh_url=>"git@github.com:racker/sage.git",
+#  :clone_url=>"https://github.com/racker/sage.git",
+#  :svn_url=>"https://github.com/racker/sage",
+#  :homepage=>"https://intelligence.rackspace.com",
+#  :size=>143778,
+#  :stargazers_count=>4,
+#  :watchers_count=>4,
+#  :language=>"JavaScript",
+#  :has_issues=>true,
+#  :has_downloads=>true,
+#  :has_wiki=>true,
+#  :has_pages=>false,
+#  :forks_count=>1,
+#  :mirror_url=>nil,
+#  :open_issues_count=>167,
+#  :forks=>1,
+#  :open_issues=>167,
+#  :watchers=>4,
+#  :default_branch=>"master",
+#  :permissions=>{:admin=>true, :push=>true, :pull=>true}}
