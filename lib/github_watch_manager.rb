@@ -69,17 +69,25 @@ EOM
   end
 
   def create_and_save_app_token(client)
-    client.create_authorization(scopes: SCOPES, note: TOKEN_NAME)
 
-  rescue Octokit::OneTimePasswordRequired
-    two_factor_token = ask('Two-Factor Auth Token: ')
+    begin
+      @log.debug('getting authentication')
+      token = client.create_authorization(scopes: SCOPES, note: TOKEN_NAME)
 
-    token = client.create_authorization(
-      scopes: SCOPES,
-      note: TOKEN_NAME,
-      headers: { 'X-GitHub-OTP' => two_factor_token }
-    )
+    rescue Octokit::OneTimePasswordRequired
+      @log.debug('2FA enabled, prompting for auth token')
+      two_factor_token = ask('Two-Factor Auth Token: ')
 
+      token = client.create_authorization(
+          scopes: SCOPES,
+          note: TOKEN_NAME,
+          headers: { 'X-GitHub-OTP' => two_factor_token }
+      )
+    end
+
+    @log.debug("fetching personal access token and storing in #{TOKEN_FILENAME}")
+
+    # TODO check for nil token :P
     token = token[:token] # get actual token from Sawyer::Resource returned by create_authorization
 
     # store the token for later runs
